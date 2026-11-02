@@ -1,130 +1,72 @@
-# NCAA Tournament Selection — Final Four Analytics Challenge 2026
+# NCAA Selection & Seed Modeling
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python) ![scikit-learn](https://img.shields.io/badge/scikit--learn-stacked%20ensemble-f7931e?logo=scikit-learn) ![pandas](https://img.shields.io/badge/pandas-feature%20engineering-150458?logo=pandas)
+> Who should make the tournament, and how should selected teams be ordered?
 
-> **Two decisions, two models.** Classify who makes the tournament, then predict a seed only for the teams that clear the cut. Selection AUC **0.966**. A precision-recall threshold of **0.653** names **70** teams against a **68-team** field.
+**Modeling study · evaluation needs revalidation**
 
-**[Live demo](https://daniel-kang-vs.github.io/ncaa-tournament-prediction/)**
+A two-stage modeling workflow separates tournament selection from overall seed prediction, with engineered team-performance features.
 
----
+[Case study](https://daniel-kang-vs.github.io/projects/ncaa.html) · [Source evidence](https://github.com/daniel-kang-vs/ncaa-tournament-prediction/blob/main/FinalFourAnalyticsChallenge2026.ipynb) · [Live dashboard](https://daniel-kang-vs.github.io/ncaa-tournament-prediction/)
 
-## Project Highlights
+## Highlights
 
-- Selection and seeding are not the same task. A single model that emits both mixes a yes/no decision with a ranking
-- **15 raw columns → 50 features** across 2,701 team-seasons: records parsed into wins, losses, and win rate, plus conference strength, NET momentum, quality wins, and strength of schedule
-- **8 base learners** (HistGradientBoosting, GradientBoosting, ExtraTrees, RandomForest, each as a classifier and a regressor). Logistic regression stacks selection. Ridge stacks the seed
-- Scores come from **10-fold stratified cross-validation** and out-of-fold predictions, so the threshold is not tuned on the same rows the model just fit
+- **1,353 training rows**
+- **249 seeded team-seasons**
+- **Two-stage workflow**
 
----
+## The problem
 
-## Problem Statement
+Selection is a binary decision; assigning an overall seed is a ranking and regression problem. Combining them into one target obscures the tradeoffs around bubble teams.
 
-The tournament has a fixed number of bids. A cutoff of 0.5 ignores that. It also treats a 1-seed and a bubble team as the same kind of error.
+## Data & scope
 
-| Stage | Question | Metric |
-|-------|----------|--------|
-| Selection | Does this team get a bid? | ROC-AUC, then an F1-maximizing threshold |
-| Seed | If yes, where are they seeded? | Mean absolute error on seed |
+The committed training file has 1,353 rows and 20 source columns. A populated Overall Seed identifies 249 selected team-seasons. Overall seed is a national ordering, not a 1–16 bracket seed line.
 
-Training file: `NCAA_Seed_Training_Set2.0.csv`. Test file: `NCAA_Seed_Test_Set2.0.csv` (451 team-rows to score). Feature definitions are in `FFAC Data Dictionary.xlsx`.
+## How it works
 
----
+1. Derive features from records, NET rankings, schedule strength and quadrant results.
+2. Generate base-model predictions and use a logistic meta-model for selection.
+3. Model overall seed separately for selected teams.
+4. Inspect class balance and season coverage before interpreting model scores.
 
-## Feature Engineering
+## Key technical decision
 
-W–L fields arrive as strings, and some were corrupted when Excel read `8-9` as a date. Those strings are parsed back into wins, losses, and a win percentage before any model sees them.
+Separate classification from regression and expose the evaluation design. Some notebook labels say XGBoost, LightGBM and CatBoost while the corresponding estimators are scikit-learn GradientBoosting, HistGradientBoosting and ExtraTrees.
 
-| Family | What it captures |
-|--------|------------------|
-| Record rates | Wins, losses, win% from the W–L columns |
-| Conference context | Conference tier, Power conference flag |
-| NET | Rank, year-over-year momentum, improvement |
-| Quality | Quality wins, bad losses |
-| Schedule | Composite strength of schedule |
+## Results & interpretation
 
-NET rank is the strongest single signal. Quality-of-win and overall win rate still move the score after NET is in the model, which is why the feature set is not “just use NET.”
+The committed artifact demonstrates the modeling workflow and feature engineering. The earlier narrative reports 0.966 AUC and a 0.653 threshold, but the notebook contains no saved evaluation outputs to verify those figures. The dashboard therefore shows source-derived dataset analysis rather than invented model curves.
 
----
+## Limitations & next steps
 
-## Model
+Imputation precedes cross-validation, and the meta-model is fitted and scored on the same out-of-fold feature matrix. The score is not an independent nested evaluation. Refit preprocessing within folds, evaluate the full stack on held-out seasons, and save predictions before claiming generalization.
 
-```
-2,701 team-seasons
-        │
-        ▼
-50 engineered features
-        │
-        ├── 4 classifiers  →  out-of-fold probabilities  →  logistic regression  →  P(selected)
-        │                                                                      │
-        │                                                           threshold 0.653
-        │
-        └── 4 regressors   →  out-of-fold seed predictions →  ridge  →  seed, only if selected
-```
+## Evidence & reproducibility
 
-Base models: HistGradientBoosting, GradientBoosting, ExtraTrees, RandomForest.
+NCAA_Seed_Training_Set2.0.csv supports the dashboard’s dataset counts. Historical model scores remain unverified, not newly reproduced.
 
-The threshold is read off the precision-recall curve of the out-of-fold selection scores. The default 0.5 cutoff selects too many teams. 0.653 is the cutoff that keeps the predicted field near 68.
+## Repository guide
 
----
+- [`FinalFourAnalyticsChallenge2026.ipynb`](FinalFourAnalyticsChallenge2026.ipynb) — analysis implementation.
+- [`docs/`](docs/) — static dashboard, styles, and browser-side analysis.
 
-## Results
+## Run or inspect
 
-| Metric | Value |
-|--------|-------|
-| Selection AUC | 0.966 |
-| Decision threshold | 0.653 (precision-recall, not 0.5) |
-| Teams selected on the test file | 70 |
-| Field size | 68 |
-| Raw columns → features | 15 → 50 |
-| Team-seasons in the history | 2,701 |
-| Validation | 10-fold stratified CV, out-of-fold predictions |
-
-The seed stage is fit to mean absolute error, not to classification accuracy. A learning-rate sweep in the notebook puts single-model seed MAE near 3.85–3.89 lines (XGBoost 3.851, LightGBM 3.885, CatBoost 3.887). That is seed error, not “usually inside two lines.” The within-±2 rate is computed in the notebook; it is a share of teams, not a guarantee on every team.
-
----
-
-## Key Technical Decisions
-
-1. **Two stages.** Bubble teams are where a combined model is most expensive. Selection is a classification decision. Seed is a rank among teams that already made it.
-
-2. **Stack on out-of-fold predictions.** If the meta-learner trains on in-sample base predictions, it learns each base model’s optimism. Out-of-fold predictions are the ones it will actually see.
-
-3. **Tune the cutoff to the field size.** AUC can be excellent and the submitted list can still be the wrong length. The 68-team constraint is a threshold problem.
-
-4. **What the validation does not prove.** Folds are stratified, not a pure walk-forward by season. A later season can still sit in the training side of an earlier fold. A stricter test would train only on past tournaments.
-
----
-
-## Repository Structure
-
-```
-├── FinalFourAnalyticsChallenge2026.ipynb
-├── NCAA_Seed_Training_Set2.0.csv
-├── NCAA_Seed_Test_Set2.0.csv
-├── FFAC Data Dictionary.xlsx
-├── submission_template2.0.csv
-├── docs/                 # Live demo
-└── README.md
-```
-
----
-
-## How to Run
+Clone this repository and run from its root:
 
 ```bash
-pip install scikit-learn pandas numpy matplotlib openpyxl
+pip install jupyter pandas numpy matplotlib scikit-learn
 jupyter notebook FinalFourAnalyticsChallenge2026.ipynb
 ```
 
-Run the notebook top to bottom. The selection AUC, the 0.653 threshold, and the 70-team list are the numbers the demo reports from that pipeline.
+Notebook commands require the referenced CSV files and compatible dependencies; recorded results have not been retrained for this documentation refresh.
 
----
+## Technology
 
-## Tech Stack
+Python · scikit-learn · pandas · Ensembles
 
-| Library | Purpose |
-|---------|---------|
-| scikit-learn | Base learners, logistic regression, ridge, stratified CV |
-| pandas / NumPy | W–L parsing and the 50-feature matrix |
-| matplotlib | Score, threshold, and comparison charts |
-| Chart.js | Charts on the live demo |
+NCAA input-quality note: some win–loss fields contain date-like strings (for example `8-Sep`). Recover the original record notation and validate parsing before retraining; the dashboard counts rows and selection labels without interpreting those fields.
+
+## Refresh the descriptive dashboard
+
+Run `python scripts/refresh_dashboard_data.py` from the repository root, then serve `docs/` with `python3 -m http.server 8000 --directory docs`. Source hashes and interpretation notes are in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).

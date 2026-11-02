@@ -1,178 +1,155 @@
-Chart.defaults.color = "#4a5a6a";
-Chart.defaults.borderColor = "rgba(15, 28, 42, 0.08)";
+const colors = ["#4f46e5", "#0891b2", "#b45309"];
+Chart.defaults.color = "#596277";
 Chart.defaults.font.family = "Figtree, sans-serif";
-
-const teal = "#0e7490";
-const tealSoft = "#5ec4d8";
-const navy = "#0b1f33";
-const slate = "#94a3b8";
-const coral = "#c45c4a";
-const amber = "#d4a017";
-const sage = "#3d8b6e";
-
-// Selection Distribution (donut)
-new Chart(document.getElementById("selectionDistChart"), {
-  type: "doughnut",
-  data: {
-    labels: ["Not Selected (Seed = 0)", "Selected (Seed 1\u201368)"],
-    datasets: [{
-      data: [1997, 704],
-      backgroundColor: [slate, teal],
-      borderWidth: 0
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { position: "bottom" },
-      tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw.toLocaleString()} teams (${(ctx.raw/2701*100).toFixed(1)}%)` } }
-    }
-  }
-});
-
-// Feature Importance (horizontal bar)
-const featNames = [
-  "NET Rank", "Quadrant1_WinPct", "WL_WinPct", "quality_wins",
-  "NETSOS", "AvgOppNETRank", "Conf.Record_WinPct", "net_momentum",
-  "RoadWL_WinPct", "NETNonConfSOS", "bad_losses", "Quadrant2_WinPct",
-  "is_power6", "sos_composite", "net_pct_change"
-];
-const featImps = [0.28, 0.12, 0.09, 0.07, 0.065, 0.06, 0.05, 0.045, 0.04, 0.035, 0.032, 0.03, 0.025, 0.022, 0.02];
-
-new Chart(document.getElementById("featureImpChart"), {
-  type: "bar",
-  data: {
-    labels: featNames,
-    datasets: [{
-      label: "Importance",
-      data: featImps,
-      backgroundColor: featImps.map((v, i) => i < 3 ? teal : i < 6 ? tealSoft : sage),
-      borderRadius: 4
-    }]
-  },
-  options: {
-    indexAxis: "y",
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { title: { display: true, text: "Relative Importance" } },
-      y: { ticks: { font: { size: 11 } } }
-    }
-  }
-});
-
-// PR-Curve / Threshold visualization
-const thresholds = [];
-const precisions = [];
-const recalls = [];
-const f1s = [];
-for (let t = 0.1; t <= 0.95; t += 0.02) {
-  thresholds.push(t.toFixed(2));
-  const p = 0.5 + 0.45 * Math.pow(t, 1.2);
-  const r = 1.0 - 0.85 * Math.pow(t, 1.8);
-  precisions.push(+p.toFixed(3));
-  recalls.push(+r.toFixed(3));
-  f1s.push(+(2 * p * r / (p + r)).toFixed(3));
+Chart.defaults.borderColor = "#e6e9f2";
+let charts = [];
+function draw(spec, id) {
+  const card = document.createElement("article");
+  card.className = "chart-card" + (spec.labels.length > 8 ? " wide" : "");
+  const h = document.createElement("h3");
+  h.textContent = spec.title;
+  const p = document.createElement("p");
+  p.textContent = spec.caption;
+  card.append(h, p);
+  const box = document.createElement("div");
+  box.className = "chart-box";
+  if (spec.labels.length > 8)
+    box.style.height = Math.max(330, spec.labels.length * 30) + "px";
+  const canvas = document.createElement("canvas");
+  canvas.id = id;
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute(
+    "aria-label",
+    spec.title + ". Exact values are available in the table below.",
+  );
+  box.append(canvas);
+  card.append(box);
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = "View exact values";
+  details.append(summary);
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap";
+  const table = document.createElement("table");
+  const cap = document.createElement("caption");
+  cap.textContent = spec.title + " (" + spec.unit + ")";
+  table.append(cap);
+  const head = document.createElement("thead"),
+    hr = document.createElement("tr");
+  ["Category", ...spec.series.map((s) => s.label)].forEach((v) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = v;
+    hr.append(th);
+  });
+  head.append(hr);
+  table.append(head);
+  const body = document.createElement("tbody");
+  spec.labels.forEach((v, i) => {
+    const tr = document.createElement("tr");
+    [v, ...spec.series.map((s) => s.values[i])].forEach((x, j) => {
+      const td = document.createElement(j === 0 ? "th" : "td");
+      if (j === 0) td.scope = "row";
+      td.textContent =
+        typeof x === "number"
+          ? x.toLocaleString(undefined, { maximumFractionDigits: 4 })
+          : x;
+      tr.append(td);
+    });
+    body.append(tr);
+  });
+  table.append(body);
+  wrap.append(table);
+  details.append(wrap);
+  card.append(details);
+  document.getElementById("charts").append(card);
+  charts.push(
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: spec.labels,
+        datasets: spec.series.map((s, i) => ({
+          label: s.label,
+          data: s.values,
+          backgroundColor: colors[i % colors.length],
+          borderRadius: 3,
+        })),
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: spec.series.length > 1, position: "bottom" },
+        },
+        scales: {
+          x: {
+            ticks: { maxRotation: 65, autoSkip: false, font: { size: 11 } },
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: spec.unit },
+            ...(spec.unit === "ROC-AUC" ? { max: 1 } : {}),
+            ...(spec.unit.startsWith("%") ? { max: 100 } : {}),
+          },
+        },
+      },
+    }),
+  );
 }
-
-new Chart(document.getElementById("thresholdChart"), {
-  type: "line",
-  data: {
-    labels: thresholds,
-    datasets: [
-      { label: "Precision", data: precisions, borderColor: teal, borderWidth: 2, fill: false, pointRadius: 0 },
-      { label: "Recall", data: recalls, borderColor: coral, borderWidth: 2, fill: false, pointRadius: 0 },
-      { label: "F1 Score", data: f1s, borderColor: sage, borderWidth: 2.5, fill: false, pointRadius: 0 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { position: "top" },
-      annotation: {}
-    },
-    scales: {
-      x: { title: { display: true, text: "Threshold" }, ticks: { maxTicksLimit: 10 } },
-      y: { title: { display: true, text: "Score" }, min: 0, max: 1 }
-    }
+function render() {
+  charts.forEach((c) => c.destroy());
+  charts = [];
+  document.getElementById("charts").replaceChildren();
+  const specs = [...DATA.charts];
+  if (DATA.slots) {
+    const r = DATA.slots[document.getElementById("slot").value];
+    specs.push({
+      title: "Total modeled cost for selected slot",
+      caption:
+        "A: flat idle cost, fixed fleet. B: borough idle cost, fixed fleet. C: borough idle cost, adjustable fleet; total includes rental adjustment.",
+      labels: ["A · baseline", "B · fixed fleet", "C · adjustable fleet"],
+      series: [
+        {
+          label: "Total modeled cost",
+          values: ["total_cost_A", "total_cost_B", "total_cost_C"].map((k) =>
+            Number(r[k]),
+          ),
+        },
+      ],
+      unit: "USD / slot",
+    });
+    document.getElementById("slotStatus").textContent =
+      "Model C selected fleet: " +
+      Number(r.F_star).toLocaleString(undefined, { maximumFractionDigits: 0 }) +
+      " vehicles. " +
+      r.direction;
   }
-});
-
-// Seed Distribution
-const seedBins = ["1\u20134", "5\u20138", "9\u201312", "13\u201316", "Play-in\n(17\u201368)"];
-const seedCounts = [4, 4, 4, 4, 54];
-
-new Chart(document.getElementById("seedDistChart"), {
-  type: "bar",
-  data: {
-    labels: seedBins,
-    datasets: [{
-      label: "Predicted Teams",
-      data: seedCounts,
-      backgroundColor: [teal, tealSoft, sage, "#6b8cae", coral],
-      borderRadius: 6
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { title: { display: true, text: "Teams" } }
-    }
-  }
-});
-
-// Old vs Improved Comparison
-new Chart(document.getElementById("comparisonChart"), {
-  type: "bar",
-  data: {
-    labels: ["Teams Selected", "AUC Score \u00d7100", "Features Used"],
-    datasets: [
-      { label: "Old (Single Model)", data: [76, 94, 30], backgroundColor: coral, borderRadius: 4 },
-      { label: "Improved (Ensemble)", data: [70, 96.6, 50], backgroundColor: teal, borderRadius: 4 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { position: "top" } },
-    scales: {
-      y: { title: { display: true, text: "Value" } }
-    }
-  }
-});
-
-// Selection Probability Distribution
-const probBins = ["0.0\u20130.1", "0.1\u20130.2", "0.2\u20130.3", "0.3\u20130.4", "0.4\u20130.5",
-                  "0.5\u20130.6", "0.6\u20130.7", "0.7\u20130.8", "0.8\u20130.9", "0.9\u20131.0"];
-const probCounts = [280, 45, 18, 12, 8, 6, 5, 7, 12, 58];
-
-new Chart(document.getElementById("probDistChart"), {
-  type: "bar",
-  data: {
-    labels: probBins,
-    datasets: [{
-      label: "Teams",
-      data: probCounts,
-      backgroundColor: probCounts.map((_, i) => i < 6 ? slate : i === 6 ? amber : teal),
-      borderRadius: 4
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          afterBody: (items) => {
-            const i = items[0].dataIndex;
-            return i === 6 ? "Optimal threshold = 0.653" : "";
-          }
-        }
-      }
-    },
-    scales: {
-      x: { title: { display: true, text: "Selection Probability" } },
-      y: { title: { display: true, text: "Number of Teams" } }
-    }
-  }
-});
+  const choice = document.getElementById("view").value;
+  specs.forEach((s, i) => {
+    if (choice === "all" || Number(choice) === i) draw(s, "chart" + i);
+  });
+}
+fetch("data.json")
+  .then((r) => {
+    if (!r.ok) throw Error("HTTP " + r.status);
+    return r.json();
+  })
+  .then((data) => {
+    window.DATA = data;
+    const view = document.getElementById("view");
+    data.charts.forEach((s, i) => {
+      const o = document.createElement("option");
+      o.value = i;
+      o.textContent = s.title;
+      view.append(o);
+    });
+    view.addEventListener("change", render);
+    document.getElementById("slot")?.addEventListener("change", render);
+    render();
+  })
+  .catch((e) => {
+    document.getElementById("charts").textContent =
+      "The analysis could not load. Please reload or inspect the source data using the link above.";
+    console.error(e);
+  });

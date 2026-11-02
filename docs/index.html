@@ -1,14 +1,15 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta content="width=device-width,initial-scale=1" name="viewport" />
     <meta
-      name="description"
       content="A two-stage modeling workflow separates tournament selection from overall seed prediction, with engineered team-performance features."
+      name="description"
     />
-    <title>NCAA Selection &amp; Seed Modeling · Daniel Kang</title>
-    <link rel="stylesheet" href="style.css?v=20261102" />
+    <title>NCAA Selection Analysis · Daniel Kang</title>
+    <link href="style.css?v=20261102b" rel="stylesheet" />
   </head>
   <body>
     <a class="skip" href="#main">Skip to analysis</a>
@@ -16,7 +17,7 @@
       <div class="wrap nav">
         <a href="https://daniel-kang-vs.github.io/">Daniel Kang</a>
         <div class="nav-links">
-          <a href="#analysis">Analysis</a><a href="#method">Method</a
+          <a href="#analysis">Analysis</a><a href="#methodology">Method</a
           ><a
             href="https://github.com/daniel-kang-vs/ncaa-tournament-prediction"
             >GitHub ↗</a
@@ -26,11 +27,10 @@
     </nav>
     <main class="wrap" id="main">
       <header class="hero">
-        <p class="eyebrow">Modeling study · evaluation needs revalidation</p>
-        <h1>NCAA Selection &amp; Seed Modeling</h1>
+        <p class="eyebrow">Tournament selection · historical data</p>
+        <h1>NCAA Selection Analysis</h1>
         <p class="lead">
-          Who should make the tournament, and how should selected teams be
-          ordered?
+          How do tournament selection rates vary by season and conference?
         </p>
         <p>
           A two-stage modeling workflow separates tournament selection from
@@ -53,84 +53,99 @@
           >
         </div>
       </header>
-      <aside class="note">
+      <section id="analysis">
+        <div class="controls">
+          <label
+            >Season
+            <select id="season">
+              <option value="all">All seasons</option>
+            </select></label
+          ><label
+            >Conference
+            <select id="conference">
+              <option value="all">All conferences</option>
+            </select></label
+          ><button class="quiet-button" id="reset" type="button">
+            Reset filters
+          </button>
+        </div>
+        <p class="scope-note" id="scope" role="status"></p>
+        <div class="metrics" id="metrics"></div>
+        <p class="finding" id="finding"></p>
+        <div class="section-heading">
+          <h2>Analysis</h2>
+          <button class="quiet-button" id="export" type="button">
+            Download displayed data
+          </button>
+        </div>
+        <div class="chart-grid" id="charts"></div>
+      </section>
+      <details class="context-details" id="methodology">
+        <summary>Methodology, interpretation and limitations</summary>
+        <section id="method">
+          <div class="method-grid">
+            <div>
+              <p class="eyebrow">Method</p>
+              <h2>From data to decision</h2>
+              <ol>
+                <li>
+                  Derive features from records, NET rankings, schedule strength
+                  and quadrant results.
+                </li>
+                <li>
+                  Generate base-model predictions and use a logistic meta-model
+                  for selection.
+                </li>
+                <li>Model overall seed separately for selected teams.</li>
+                <li>
+                  Inspect class balance and season coverage before interpreting
+                  model scores.
+                </li>
+              </ol>
+            </div>
+            <div>
+              <p class="eyebrow">Interpretation</p>
+              <h2>What to take away</h2>
+              <p>
+                The committed artifact demonstrates the modeling workflow and
+                feature engineering. The earlier narrative reports 0.966 AUC and
+                a 0.653 threshold, but the notebook contains no saved evaluation
+                outputs to verify those figures. The dashboard therefore shows
+                source-derived dataset analysis rather than invented model
+                curves.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section class="note">
+          <h2>Limitations &amp; next steps</h2>
+          <p>
+            Imputation precedes cross-validation, and the meta-model is fitted
+            and scored on the same out-of-fold feature matrix. The score is not
+            an independent nested evaluation. Refit preprocessing within folds,
+            evaluate the full stack on held-out seasons, and save predictions
+            before claiming generalization.
+          </p>
+          <p>
+            <strong>Source:</strong> NCAA_Seed_Training_Set2.0.csv supports the
+            dashboard’s dataset counts. Historical model scores remain
+            unverified, not newly reproduced.
+          </p>
+          <a
+            href="https://github.com/daniel-kang-vs/ncaa-tournament-prediction/blob/main/FinalFourAnalyticsChallenge2026.ipynb"
+            >Inspect the source artifact ↗</a
+          >
+        </section>
+      </details>
+      <details class="context-details">
+        <summary>Data scope and definitions</summary>
         <strong>What these numbers represent</strong>
         <p>
           The committed training file has 1,353 rows and 20 source columns. A
           populated Overall Seed identifies 249 selected team-seasons. Overall
           seed is a national ordering, not a 1–16 bracket seed line.
         </p>
-      </aside>
-      <section id="analysis">
-        <p class="eyebrow">Explore the evidence</p>
-        <h2>Interactive analysis</h2>
-        <p>
-          Choose a view, hover for details, or expand a chart’s exact-value
-          table.
-        </p>
-        <div class="controls">
-          <label for="view"
-            >Chart view
-            <select id="view">
-              <option value="all">All charts</option>
-            </select></label
-          >
-        </div>
-        <div class="chart-grid" id="charts" aria-live="polite"></div>
-      </section>
-      <section id="method">
-        <div class="method-grid">
-          <div>
-            <p class="eyebrow">Method</p>
-            <h2>From data to decision</h2>
-            <ol>
-              <li>
-                Derive features from records, NET rankings, schedule strength
-                and quadrant results.
-              </li>
-              <li>
-                Generate base-model predictions and use a logistic meta-model
-                for selection.
-              </li>
-              <li>Model overall seed separately for selected teams.</li>
-              <li>
-                Inspect class balance and season coverage before interpreting
-                model scores.
-              </li>
-            </ol>
-          </div>
-          <div>
-            <p class="eyebrow">Interpretation</p>
-            <h2>What to take away</h2>
-            <p>
-              The committed artifact demonstrates the modeling workflow and
-              feature engineering. The earlier narrative reports 0.966 AUC and a
-              0.653 threshold, but the notebook contains no saved evaluation
-              outputs to verify those figures. The dashboard therefore shows
-              source-derived dataset analysis rather than invented model curves.
-            </p>
-          </div>
-        </div>
-      </section>
-      <section class="note">
-        <h2>Limitations &amp; next steps</h2>
-        <p>
-          Imputation precedes cross-validation, and the meta-model is fitted and
-          scored on the same out-of-fold feature matrix. The score is not an
-          independent nested evaluation. Refit preprocessing within folds,
-          evaluate the full stack on held-out seasons, and save predictions
-          before claiming generalization.
-        </p>
-        <p>
-          <strong>Source:</strong> NCAA_Seed_Training_Set2.0.csv supports the
-          dashboard’s dataset counts. Historical model scores remain unverified,
-          not newly reproduced.
-        </p>
-        <a
-          href="https://github.com/daniel-kang-vs/ncaa-tournament-prediction/blob/main/FinalFourAnalyticsChallenge2026.ipynb"
-          >Inspect the source artifact ↗</a
-        >
-      </section>
+      </details>
     </main>
     <footer>
       <div class="wrap">
@@ -141,6 +156,6 @@
       </div>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="app.js?v=20261102"></script>
+    <script src="app.js?v=20261102b"></script>
   </body>
 </html>

@@ -72,3 +72,7 @@ NCAA input-quality note: some win–loss fields contain date-like strings (for e
 ## Refresh the descriptive dashboard
 
 Run `python scripts/refresh_dashboard_data.py` from the repository root, then serve `docs/` with `python3 -m http.server 8000 --directory docs`. Source hashes and interpretation notes are in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+
+## Dashboard exploration
+
+The dashboard filters the supplied team-season records by season and conference. Selection rates use selected rows divided by all matching rows; median NET excludes missing NET values. Conference charts show the top 12 rates with sample sizes. The record table shows the first 50 matching rows; CSV export includes all matching rows.

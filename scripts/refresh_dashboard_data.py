@@ -28,5 +28,6 @@ charts[2]["labels"] = [key for key, value in conferences]
 charts[2]["series"][0]["values"] = [value for key, value in conferences]
 charts[3]["labels"] = [key for key, value in missing]
 charts[3]["series"][0]["values"] = [value for key, value in missing]
+data["records"] = [{"season": r["Season"], "team": r["Team"], "conference": r["Conference"], "selected": selected(r), "seed": float(r["Overall Seed"]) if selected(r) else None, "net": float(r["NET Rank"]) if r["NET Rank"].strip() else None} for r in rows]
 target.write_text(json.dumps(data, indent=2) + "\n")
 print(f"Refreshed descriptive charts from {len(rows):,} input rows; review captions if the source changed.")

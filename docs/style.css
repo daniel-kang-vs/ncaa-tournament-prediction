@@ -300,3 +300,6 @@ footer {
     height: 310px;
   }
 }
+
+/* Let a short summary fill the row before a full-width detailed chart. */
+.chart-grid .chart-card:has(+ .wide) { grid-column: 1 / -1; }

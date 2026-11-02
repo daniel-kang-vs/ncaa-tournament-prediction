@@ -8,6 +8,8 @@ A two-stage modeling workflow separates tournament selection from overall seed p
 
 [Case study](https://daniel-kang-vs.github.io/projects/ncaa.html) · [Source evidence](https://github.com/daniel-kang-vs/ncaa-tournament-prediction/blob/main/FinalFourAnalyticsChallenge2026.ipynb) · [Live dashboard](https://daniel-kang-vs.github.io/ncaa-tournament-prediction/)
 
+[![Dashboard preview](https://raw.githubusercontent.com/daniel-kang-vs/daniel-kang-vs.github.io/main/pngs/project-ncaa.png)](https://daniel-kang-vs.github.io/ncaa-tournament-prediction/)
+
 ## Highlights
 
 - **1,353 training rows**
